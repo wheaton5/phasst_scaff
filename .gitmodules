@@ -1,0 +1,3 @@
+[submodule "molecule_kmers"]
+	path = molecule_kmers
+	url = https://github.com/wheaton5/molecule_kmers.git

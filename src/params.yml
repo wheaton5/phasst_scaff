@@ -47,3 +47,8 @@ args:
         required: true
         help: assembly kmers file from molecule_kmers
         takes_value: true
+    - phased_vcf:
+        long: phased_vcf
+        required: true
+        help: phased vcf from phasst phase
+        takes_value: true

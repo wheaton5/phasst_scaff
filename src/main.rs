@@ -85,18 +85,22 @@ fn phasing_consistency(
                                     .or_insert(PhasingConsistency::new());
                                 if *phase1 && *phase2 {
                                     counts.cis1 += 1;
+                                    eprintln!("adding, now {}", counts.cis1);
                                 } else if *phase1 && !phase2 {
                                     counts.trans1 += 1;
+                                    eprintln!("adding, now {}", counts.trans1);
                                 } else if !phase1 && *phase2 {
                                     counts.trans2 += 1;
+                                    eprintln!("adding, now {}", counts.trans2);
                                 } else {
                                     counts.cis2 += 1;
+                                    eprintln!("adding, now {}", counts.cis2);
                                 }
-                            }
-                        }
+                            } else { eprintln!("no phase2"); }
+                        } else { eprintln!("no contig2"); }
                     }
-                }
-            }
+                } else { eprintln!("no contig"); }
+            } else { eprintln!("no phase"); }
         }
     }
     for ((contig1, contig2), counts) in phasing_consistency_counts.counts.iter() {

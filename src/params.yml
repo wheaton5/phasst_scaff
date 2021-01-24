@@ -9,32 +9,26 @@ args:
         takes_value: true
         required: true
         help: output directory
-    - paired_kmers:
+    - het_kmers:
         long: het_kmers
         short: k
         takes_value: true
         required: false
         help: het_kmers.tsv from het_snp_kmers output
-    - linked_read_kmers:
-        long: linked_read_kmers
+    - linked_read_barcodes:
+        long: linked_read_barcodes
         short: l
         multiple: true
         takes_value: true
         required: false
         help: 10x genomics linked read kmers as output of from molecule_kmers
-    - hic_kmers:
-        long: hic_kmers
+    - hic_mols:
+        long: hic_mols
         short: h
         multiple: true
         required: true
         takes_value: true
         help: hic kmers as output from molecule_kmers
-    - threads:
-        short: t
-        long: threads
-        required: false
-        takes_value: true
-        help: max number of threads. (not yet threaded, for future use)
     - assembly_fasta:
         short: f
         long: assembly_fasta

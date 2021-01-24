@@ -140,9 +140,10 @@ impl KmerContigs {
         self.contigs.get(kmer)
     }
 
-    fn set_contig(&self, kmer: i32, contig: i32) {
-        self.set_contig(kmer, contig);
+    fn set_contig(&mut self, kmer: i32, contig: i32) {
+        self.contigs.insert(kmer, contig);
     }
+
     fn new() -> KmerContigs {
         KmerContigs {
             contigs: HashMap::new(),

@@ -69,35 +69,37 @@ fn phasing_consistency(
         for vardex1 in 0..hicmol.len() {
             let var1 = hicmol[vardex1];
             if let Some(phase1) = phasing.get_phase(&var1.abs()) {
-                let contigid1 = kmer_contigs.get_contig(&var1.abs());
-                for vardex2 in (vardex1 + 1)..hicmol.len() {
-                    let var2 = hicmol[vardex2];
-                    let contigid2 = kmer_contigs.get_contig(&var2.abs());
-                    if contigid1 == contigid2 {
-                        continue;
-                    }
-                    if let Some(phase2) = phasing.get_phase(&var2.abs()) {
-                        let min = contigid1.min(contigid2);
-                        let max = contigid1.max(contigid2);
-                        let counts = phasing_consistency_counts
-                            .counts
-                            .entry((min, max))
-                            .or_insert(PhasingConsistency::new());
-                        if *phase1 && *phase2 {
-                            counts.cis1 += 1;
-                        } else if *phase1 && !phase2 {
-                            counts.trans1 += 1;
-                        } else if !phase1 && *phase2 {
-                            counts.trans2 += 1;
-                        } else {
-                            counts.cis2 += 1;
+                if let Some(contigid1) = kmer_contigs.get_contig(&var1.abs()) {
+                    for vardex2 in (vardex1 + 1)..hicmol.len() {
+                        let var2 = hicmol[vardex2];
+                        if let Some(contigid2) = kmer_contigs.get_contig(&var2.abs()){
+                            if contigid1 == contigid2 {
+                                continue;
+                            }
+                            if let Some(phase2) = phasing.get_phase(&var2.abs()) {
+                                let min = contigid1.min(contigid2);
+                                let max = contigid1.max(contigid2);
+                                let counts = phasing_consistency_counts
+                                    .counts
+                                    .entry((*min, *max))
+                                    .or_insert(PhasingConsistency::new());
+                                if *phase1 && *phase2 {
+                                    counts.cis1 += 1;
+                                } else if *phase1 && !phase2 {
+                                    counts.trans1 += 1;
+                                } else if !phase1 && *phase2 {
+                                    counts.trans2 += 1;
+                                } else {
+                                    counts.cis2 += 1;
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     }
-     for ((contig1, contig2), counts) in phasing_consistency_counts.counts.iter() {
+    for ((contig1, contig2), counts) in phasing_consistency_counts.counts.iter() {
         if counts.cis1 + counts.cis2 + counts.trans1 + counts.trans2 > 10 {
             eprintln!("{} -- {} = {:?}", contig1, contig2, counts);
         }
@@ -130,8 +132,8 @@ struct KmerContigs {
 }
 
 impl KmerContigs {
-    fn get_contig(&self, kmer: &i32) -> i32 {
-        *self.contigs.get(kmer).unwrap()
+    fn get_contig(&self, kmer: &i32) -> Option<&i32> {
+        self.contigs.get(kmer)
     }
 
     fn set_contig(&self, kmer: i32, contig: i32) {

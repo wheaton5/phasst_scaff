@@ -105,8 +105,22 @@ fn phasing_consistency(
     }
     for ((contig1, contig2), counts) in phasing_consistency_counts.counts.iter() {
         if counts.cis1 + counts.cis2 + counts.trans1 + counts.trans2 > 10 {
-            eprintln!("{} -- {} = {:?}", contig1, contig2, counts);
-        }
+            let cis = (counts.cis1 + counts.cis2) as f32;
+            let trans = (counts.trans1 + counts.trans2) as f32;
+            if cis > trans && cis/(cis + trans) > 0.9 {
+                let min = counts.cis1.min(counts.cis2) as f32;
+                if min / cis > 0.25 {
+                    eprintln!("match in cis {} -- {} = {:?}", contig1, contig2, counts);
+                }
+            } else if trans > cis && trans/(cis + trans) > 0.9 {
+                let min = counts.trans1.min(counts.trans2) as f32;
+                if min / trans > 0.25 {
+                    eprintln!("match in trans {} -- {} = {:?}", contig1, contig2, counts);
+                }
+            } else {
+                eprintln!("unrelated, output for debug {} -- {} = {:?}", contig1, contig2, counts);
+            }
+        } 
     }
     phasing_consistency_counts
 }

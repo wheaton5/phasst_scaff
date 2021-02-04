@@ -2,6 +2,9 @@
 extern crate clap;
 extern crate hashbrown;
 extern crate phasst_lib;
+extern crate disjoint_set;
+
+use disjoint_set::DisjointSet;
 
 use hashbrown::{HashMap, HashSet};
 use phasst_lib::{
@@ -24,7 +27,7 @@ fn main() {
     eprintln!("loading hic kmers");
     let hic_mols = load_hic(&Some(params.hic_mols), &kmers);
     eprintln!("building phasing consistency counts");
-    let phasing_consistency_counts = phasing_consistency(&hic_mols, &phasing, &kmer_contigs);
+    let phasing_consistency_counts = phasing_consistency(&hic_mols, &phasing, &kmer_contigs, &assembly);
 }
 
 struct PhasingConsistencyCounts {
@@ -58,13 +61,20 @@ impl PhasingConsistency {
     }
 }
 
+struct Scaffold {
+    chromosomes: HashMap<usize, Vec<i32>>,
+}
+
 fn phasing_consistency(
     hic_mols: &HicMols,
     phasing: &Phasing,
-    kmer_contigs: &KmerContigs,
-) -> PhasingConsistencyCounts {
+    kmer_contigs: &KmerContigs, assembly: &Assembly,
+) -> (PhasingConsistencyCounts,  Scaffold) {
     let mut phasing_consistency_counts = PhasingConsistencyCounts::new();
-
+    let mut components: DisjointSet<i32> = DisjointSet::new();
+    for (_name, id) in assembly.contig_ids.iter() {
+        components.make_set(*id);
+    }
     for hicmol in hic_mols.get_hic_molecules() {
         for vardex1 in 0..hicmol.len() {
             let var1 = hicmol[vardex1];
@@ -103,18 +113,21 @@ fn phasing_consistency(
             } else { eprintln!("no phase"); }
         }
     }
+    
     for ((contig1, contig2), counts) in phasing_consistency_counts.counts.iter() {
-        if counts.cis1 + counts.cis2 + counts.trans1 + counts.trans2 > 10 {
+        if counts.cis1 + counts.cis2 + counts.trans1 + counts.trans2 > 150 {
             let cis = (counts.cis1 + counts.cis2) as f32;
             let trans = (counts.trans1 + counts.trans2) as f32;
             if cis > trans && cis/(cis + trans) > 0.9 {
                 let min = counts.cis1.min(counts.cis2) as f32;
                 if min / cis > 0.25 {
+                    components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");
                     eprintln!("match in cis {} -- {} = {:?}", contig1, contig2, counts);
                 }
             } else if trans > cis && trans/(cis + trans) > 0.9 {
                 let min = counts.trans1.min(counts.trans2) as f32;
                 if min / trans > 0.25 {
+                    components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");
                     eprintln!("match in trans {} -- {} = {:?}", contig1, contig2, counts);
                 }
             } else {
@@ -122,7 +135,25 @@ fn phasing_consistency(
             }
         } 
     }
-    phasing_consistency_counts
+
+    let mut sizes: HashMap<usize, usize> = HashMap::new();
+    let mut scaffolds: HashMap<usize, Vec<i32>> = HashMap::new();
+    for (_name, id) in assembly.contig_ids.iter() {
+        let comp = components.find(*id).unwrap_or(0);
+        let compvec = scaffolds.entry(comp).or_insert(Vec::new());
+        compvec.push(*id);
+        let size = assembly.contig_sizes.get(id).unwrap();
+        let compsize = sizes.entry(comp).or_insert(0);
+        *compsize += *size;
+    }
+    let mut count_vec: Vec<(&usize, &usize)> = sizes.iter().collect();
+    count_vec.sort_by(|a, b| b.1.cmp(a.1));
+    eprintln!("SCAFFOLD SIZES!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    for (component, size) in count_vec.iter() {
+        eprintln!("scaffold {} size {}", component, size);
+    }
+
+    (phasing_consistency_counts, Scaffold {chromosomes: scaffolds} )
 }
 
 struct Phasing {

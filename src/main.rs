@@ -27,7 +27,24 @@ fn main() {
     eprintln!("loading hic kmers");
     let hic_mols = load_hic(&Some(params.hic_mols), &kmers);
     eprintln!("building phasing consistency counts");
-    let phasing_consistency_counts = phasing_consistency(&hic_mols, &phasing, &kmer_contigs, &assembly);
+    let (phasing_consistency_counts, scaffolds) = phasing_consistency(&hic_mols, &phasing, &kmer_contigs, &assembly);
+    let ordered_scaffolds = order_and_orient(scaffolds);
+}
+
+struct OrderedScaffolds {
+    scaffolds: Vec<OrderedScaffold>,
+}
+
+struct OrderedScaffold {
+    order: Vec<i32>,
+    orientations: Vec<bool>,
+    gaps: Vec<usize>, // gap after each contig, will append 0 on the end to make equal length with other vecs
+}
+
+fn order_and_orient(scaffolds: Scaffold) -> OrderedScaffolds {
+    let mut scaffolds = OrderedScaffolds { scaffolds: Vec::new() };
+
+    scaffolds
 }
 
 struct PhasingConsistencyCounts {
@@ -126,10 +143,10 @@ fn phasing_consistency(
                     components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");
                     eprintln!("match in trans {} -- {} = {:?}", contig1, contig2, counts);
                 }
-            } else {
-                eprintln!("unrelated, output for debug {} -- {} = {:?}", contig1, contig2, counts);
-            }
-        } 
+            } 
+        } else {
+            eprintln!("unrelated, output for debug {} -- {} = {:?}", contig1, contig2, counts);
+        }
     }
 
     let mut sizes: HashMap<usize, usize> = HashMap::new();

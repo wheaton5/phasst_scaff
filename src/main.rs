@@ -95,22 +95,18 @@ fn phasing_consistency(
                                     .or_insert(PhasingConsistency::new());
                                 if *phase1 && *phase2 {
                                     counts.cis1 += 1;
-                                    eprintln!("adding, now {}", counts.cis1);
                                 } else if *phase1 && !phase2 {
                                     counts.trans1 += 1;
-                                    eprintln!("adding, now {}", counts.trans1);
                                 } else if !phase1 && *phase2 {
                                     counts.trans2 += 1;
-                                    eprintln!("adding, now {}", counts.trans2);
                                 } else {
                                     counts.cis2 += 1;
-                                    eprintln!("adding, now {}", counts.cis2);
                                 }
-                            } else { eprintln!("no phase2"); }
-                        } else { eprintln!("no contig2"); }
+                            } 
+                        } 
                     }
-                } else { eprintln!("no contig"); }
-            } else { eprintln!("no phase"); }
+                } 
+            } 
         }
     }
     
@@ -216,7 +212,7 @@ fn load_phased_vcf(vcf: &String, kmers: &Kmers, assembly: &Assembly) -> (Phasing
         let kmer_id1 = kmers.kmer_ids.get(&reference).unwrap();
         let kmer_id2 = kmers.kmer_ids.get(&alternative).unwrap();
         let contig = toks[0].to_string();
-        let contig_id = assembly.contig_ids.get(&contig).unwrap();
+        let contig_id = assembly.contig_ids.get(&contig).expect(format!("cannot find contig name {}", contig));
         kmer_contigs.set_contig(*kmer_id1, *contig_id);
         kmer_contigs.set_contig(*kmer_id2, *contig_id);
         if hap1 == "0" && hap2 == "1" {

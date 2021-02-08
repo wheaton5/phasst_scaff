@@ -136,14 +136,20 @@ fn phasing_consistency(
                 if min / cis > 0.25 {
                     components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");
                     eprintln!("match in cis {} -- {} = {:?}", contig1, contig2, counts);
+                } else {
+                    eprintln!("unrelated? {} -- {} = {:?}", contig1, contig2, counts);
                 }
             } else if trans > cis && trans/(cis + trans) > 0.9 {
                 let min = counts.trans1.min(counts.trans2) as f32;
                 if min / trans > 0.25 {
                     components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");
                     eprintln!("match in trans {} -- {} = {:?}", contig1, contig2, counts);
+                } else {
+                    eprintln!("unrelated? {} -- {} = {:?}", contig1, contig2, counts);
                 }
-            } 
+            } else {
+                eprintln!("unrelated, output for debug {} -- {} = {:?}", contig1, contig2, counts);
+            }
         } else {
             eprintln!("unrelated, output for debug {} -- {} = {:?}", contig1, contig2, counts);
         }

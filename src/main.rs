@@ -15,7 +15,6 @@ use phasst_lib::{
 use statrs::distribution::{Binomial};
 use statrs::distribution::{Univariate};
 
-use statrs::statistics::Mean;
 
 use clap::App;
 
@@ -211,7 +210,7 @@ fn binomial_test(cis: f32, trans: f32) -> f64 {
     let min = cis.min(trans) as f64;
     let max = cis.max(trans) as f64;
     let n = Binomial::new(0.5, (cis+trans) as u64).unwrap();
-    let p_value = n.cdf(min/(min+max)) * 2.0;
+    let p_value = n.cdf(min) * 2.0;
     p_value
 }
 

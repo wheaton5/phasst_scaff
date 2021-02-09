@@ -3,6 +3,7 @@ extern crate clap;
 extern crate hashbrown;
 extern crate phasst_lib;
 extern crate disjoint_set;
+extern crate statrs;
 
 use disjoint_set::DisjointSet;
 
@@ -11,6 +12,10 @@ use phasst_lib::{
     get_reader, load_assembly_kmers, load_hic, load_hifi, load_linked_read_barcodes, Assembly,
     HicMols, HifiMols, Kmers, LinkedReadBarcodes,
 };
+use statrs::distribution::{Binomial};
+use statrs::distribution::{Univariate};
+
+use statrs::statistics::Mean;
 
 use clap::App;
 
@@ -28,7 +33,7 @@ fn main() {
     let hic_mols = load_hic(&Some(params.hic_mols), &kmers);
     eprintln!("building phasing consistency counts");
     let (phasing_consistency_counts, scaffolds) = phasing_consistency(&hic_mols, &phasing, &kmer_contigs, &assembly);
-    let ordered_scaffolds = order_and_orient(scaffolds);
+    let ordered_scaffolds = order_and_orient(scaffolds, &hic_mols);
 }
 
 struct OrderedScaffolds {
@@ -41,10 +46,35 @@ struct OrderedScaffold {
     gaps: Vec<usize>, // gap after each contig, will append 0 on the end to make equal length with other vecs
 }
 
-fn order_and_orient(scaffolds: Scaffold) -> OrderedScaffolds {
+fn order_and_orient(scaffolds: Scaffold, hic_mols: &HicMols) -> OrderedScaffolds {
     let mut scaffolds = OrderedScaffolds { scaffolds: Vec::new() };
-
+    //let length_distribution: = get_empirical_hic_distribution(hic_mols); // index is number of bases apart, value is density
     scaffolds
+}
+
+struct LengthDistribution {
+    length_distribution: Vec<f32>,
+    tail_probability: f32,
+}
+
+impl LengthDistribution {
+    fn density(&self, length: usize) -> f32 {
+        if length/1000 >= self.length_distribution.len() {
+            self.tail_probability
+        } else {
+            self.length_distribution[length/1000]
+        }
+    }
+}
+
+fn get_empirical_hic_distribution(hic_mols: &HicMols) -> LengthDistribution {
+    let mut lengths: Vec<usize> = Vec::new();
+    let mut to_return = LengthDistribution { length_distribution: Vec::new(), tail_probability: 0.0, };
+
+    for hic in hic_mols.get_hic_molecules() {
+        let contig: Option<i32> = None;
+    }
+    to_return
 }
 
 struct PhasingConsistencyCounts {
@@ -128,30 +158,32 @@ fn phasing_consistency(
     }
     
     for ((contig1, contig2), counts) in phasing_consistency_counts.counts.iter() {
+        let cis = (counts.cis1 + counts.cis2) as f32;
+        let trans = (counts.trans1 + counts.trans2) as f32;
+        let p_value = binomial_test(cis, trans);
         if counts.cis1 + counts.cis2 + counts.trans1 + counts.trans2 > 150 {
-            let cis = (counts.cis1 + counts.cis2) as f32;
-            let trans = (counts.trans1 + counts.trans2) as f32;
-            if cis > trans && cis/(cis + trans) > 0.9 {
+            //if cis > trans && cis/(cis + trans) > 0.9 {
+            if p_value < 0.001 { // ? change? keep? test. 
                 let min = counts.cis1.min(counts.cis2) as f32;
                 if min / cis > 0.25 {
                     components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");
-                    eprintln!("match in cis {} -- {} = {:?}", contig1, contig2, counts);
+                    eprintln!("match in cis {} -- {} = {:?}, p-value {}", contig1, contig2, counts, p_value);
                 } else {
-                    eprintln!("unrelated? {} -- {} = {:?}", contig1, contig2, counts);
+                    eprintln!("unrelated? {} -- {} = {:?}, p-value {} ", contig1, contig2, counts, p_value);
                 }
             } else if trans > cis && trans/(cis + trans) > 0.9 {
                 let min = counts.trans1.min(counts.trans2) as f32;
                 if min / trans > 0.25 {
                     components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");
-                    eprintln!("match in trans {} -- {} = {:?}", contig1, contig2, counts);
+                    eprintln!("match in trans {} -- {} = {:?}, p-value {}", contig1, contig2, counts, p_value);
                 } else {
-                    eprintln!("unrelated? {} -- {} = {:?}", contig1, contig2, counts);
+                    eprintln!("unrelated? {} -- {} = {:?}, p-value {}", contig1, contig2, counts, p_value);
                 }
             } else {
-                eprintln!("unrelated, output for debug {} -- {} = {:?}", contig1, contig2, counts);
+                eprintln!("unrelated, output for debug {} -- {} = {:?}, p-value {}", contig1, contig2, counts, p_value);
             }
         } else {
-            eprintln!("unrelated, output for debug {} -- {} = {:?}", contig1, contig2, counts);
+            eprintln!("unrelated, output for debug {} -- {} = {:?}, p-value {}", contig1, contig2, counts, p_value);
         }
     }
 
@@ -173,6 +205,14 @@ fn phasing_consistency(
     }
 
     (phasing_consistency_counts, Scaffold {chromosomes: scaffolds} )
+}
+
+fn binomial_test(cis: f32, trans: f32) -> f64 {
+    let min = cis.min(trans) as f64;
+    let max = cis.max(trans) as f64;
+    let n = Binomial::new(0.5, (cis+trans) as u64).unwrap();
+    let p_value = n.cdf(min/(min+max)) * 2.0;
+    p_value
 }
 
 struct Phasing {

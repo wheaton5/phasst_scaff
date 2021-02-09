@@ -610,6 +610,7 @@ dependencies = [
  "hashbrown 0.1.8",
  "phasst_lib",
  "rayon",
+ "statrs",
 ]
 
 [[package]]

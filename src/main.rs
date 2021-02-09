@@ -162,7 +162,9 @@ fn phasing_consistency(
         let p_value = binomial_test(cis, trans);
         if counts.cis1 + counts.cis2 + counts.trans1 + counts.trans2 > 150 {
             //if cis > trans && cis/(cis + trans) > 0.9 {
-            if p_value < 0.001 { // ? change? keep? test. 
+            let min = (counts.cis1 + counts.cis2).min(counts.trans1 + counts.trans2) as f64;
+            let max = (counts.cis1 + counts.cis2).min(counts.trans1 + counts.trans2) as f64;
+            if p_value < 0.00001 && min/(min+max) > 0.7 { // ? change? keep? test. 
                 let min = counts.cis1.min(counts.cis2) as f32;
                 if min / cis > 0.25 {
                     components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");

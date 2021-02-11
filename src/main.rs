@@ -201,7 +201,6 @@ fn phasing_consistency(
         let cis = (counts.cis1 + counts.cis2) as f32;
         let trans = (counts.trans1 + counts.trans2) as f32;
         let p_value = binomial_test(cis, trans);
-        eprintln!("contigs {} {}", contig1, contig2);
         let contig1_kmers = assembly.molecules.get(contig1).unwrap().len() as f64;
         let contig2_kmers = assembly.molecules.get(contig2).unwrap().len() as f64;
         let dominant_kmers = contig1_kmers.min(contig2_kmers);

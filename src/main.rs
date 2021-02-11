@@ -56,7 +56,7 @@ fn output_modified_fasta(scaffolds: &Scaffold, params: &Params, assembly: &Assem
     let mut size_vec: Vec<(&usize, &usize)> = scaffold_sizes.iter().collect();
     size_vec.sort_by(|a, b| b.1.cmp(a.1));
 
-    let mut writer = fasta::Writer::to_file(&Path::new(&format!("{}/chromosomes.fa",params.output))).expect("cannot open fasta writer");
+    let mut writer = fasta::Writer::to_file(Path::new(&format!("{}/chromosomes.fa",params.output))).expect("cannot open fasta writer");
     for (scaffold_id, (scaffold, size)) in size_vec.iter().enumerate() {
         let mut contig_names: Vec<String> = Vec::new();
         for contig in scaffolds.chromosomes.get(scaffold).unwrap().iter() {

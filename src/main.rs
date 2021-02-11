@@ -44,6 +44,7 @@ fn main() {
 }
 
 fn output_modified_fasta(scaffolds: &Scaffold, params: &Params, assembly: &Assembly) {
+    eprintln!("{}",params.assembly_fasta);
     let mut reader =  fasta::IndexedReader::from_file(&Path::new(&params.assembly_fasta)).expect("fasta not found");
     let mut scaffold_sizes: HashMap<usize, usize> = HashMap::new();
     for (scaffold, contigs) in scaffolds.chromosomes.iter() {

@@ -215,7 +215,7 @@ fn phasing_consistency(
                     components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");
                     eprintln!("match in cis {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
                 } else {
-                    eprintln!("unrelated? {} -- {} = {:?}, kmer coverage {}, p-value {} ", contig1, contig2, counts, coverage, p_value);
+                    eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {} ", contig1, contig2, counts, coverage, p_value);
                 }
             } else if p_value < 0.000001 && max/(min+max) > 0.8  {
                 let min = counts.trans1.min(counts.trans2) as f32;
@@ -223,13 +223,13 @@ fn phasing_consistency(
                     components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");
                     eprintln!("match in trans {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
                 } else {
-                    eprintln!("unrelated? {} -- {} = {:?}, kmer_coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
+                    eprintln!("unrelated . . {} -- {} = {:?}, kmer_coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
                 }
             } else {
-                eprintln!("unrelated, output for debug {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
+                eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
             }
         } else {
-            eprintln!("unrelated, output for debug {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
+            eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
         }
     }
 

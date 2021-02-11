@@ -4,6 +4,13 @@ extern crate hashbrown;
 extern crate phasst_lib;
 extern crate disjoint_set;
 extern crate statrs;
+extern crate bio;
+
+use bio::io::fasta;
+use bio::utils::Text;
+use bio::io::fasta::Record;
+use std::path::Path;
+
 
 use disjoint_set::DisjointSet;
 
@@ -29,10 +36,43 @@ fn main() {
     let assembly = load_assembly_kmers(&params.assembly_kmers, &params.assembly_fasta, &kmers);
     let (phasing, kmer_contigs) = load_phased_vcf(&params.phased_vcf, &kmers, &assembly);
     eprintln!("loading hic kmers");
-    let hic_mols = load_hic(&Some(params.hic_mols), &kmers);
+    let hic_mols = load_hic(Some(&params.hic_mols), &kmers);
     eprintln!("building phasing consistency counts");
     let (phasing_consistency_counts, scaffolds) = phasing_consistency(&hic_mols, &phasing, &kmer_contigs, &assembly);
+    output_modified_fasta(&scaffolds, &params, &assembly);
     let ordered_scaffolds = order_and_orient(scaffolds, &hic_mols);
+}
+
+fn output_modified_fasta(scaffolds: &Scaffold, params: &Params, assembly: &Assembly) {
+    let mut reader =  fasta::IndexedReader::from_file(&Path::new(&params.assembly_fasta)).expect("fasta not found");
+    let mut scaffold_sizes: HashMap<usize, usize> = HashMap::new();
+    for (scaffold, contigs) in scaffolds.chromosomes.iter() {
+        let size = scaffold_sizes.entry(*scaffold).or_insert(0);
+        for contig in contigs {
+            *size += assembly.contig_sizes.get(contig).unwrap();
+        }
+    }
+    let mut size_vec: Vec<(&usize, &usize)> = scaffold_sizes.iter().collect();
+    size_vec.sort_by(|a, b| b.1.cmp(a.1));
+
+    let mut writer = fasta::Writer::to_file(&Path::new(&format!("{}/chromosomes.fa",params.output))).expect("cannot open fasta writer");
+    for (scaffold_id, (scaffold, size)) in size_vec.iter().enumerate() {
+        let mut contig_names: Vec<String> = Vec::new();
+        for contig in scaffolds.chromosomes.get(scaffold).unwrap().iter() {
+            let contig_name = &assembly.contig_names[*contig as usize];
+            contig_names.push(contig_name.to_string());
+        }
+        let full_concat = contig_names.join("_");
+        for contig in scaffolds.chromosomes.get(scaffold).unwrap().iter() {
+            let contig_name = &assembly.contig_names[*contig as usize];
+            reader.fetch_all(contig_name).expect("cannot find contig name in fasta");
+            let mut seq: Text = Text::new();
+            reader.read(&mut seq).expect("cannot read fasta");
+            let id = format!("scaff_{}_contig_{}_{}_{}",scaffold_id+1, contig_name, size, full_concat);
+            let record = Record::with_attrs(&id, None, &seq);
+            writer.write_record(&record).expect("could not write record");
+        }
+    }
 }
 
 struct OrderedScaffolds {
@@ -205,7 +245,7 @@ fn phasing_consistency(
         eprintln!("scaffold {} size {}", component, size);
     }
 
-    (phasing_consistency_counts, Scaffold {chromosomes: scaffolds} )
+    (phasing_consistency_counts, Scaffold { chromosomes: scaffolds} )
 }
 
 fn binomial_test(cis: f32, trans: f32) -> f64 {

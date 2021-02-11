@@ -588,7 +588,7 @@ dependencies = [
 [[package]]
 name = "phasst_lib"
 version = "0.1.0"
-source = "git+https://github.com/wheaton5/phasst_lib.git?branch=main#e9d3aad945046fd2d9a97fad7da932802fefe070"
+source = "git+https://github.com/wheaton5/phasst_lib.git?branch=main#94aae5491f41731c9aad7d6f98247d2bcceb08a5"
 dependencies = [
  "bio",
  "byteorder",
@@ -604,6 +604,7 @@ dependencies = [
 name = "phasst_scaff"
 version = "0.1.0"
 dependencies = [
+ "bio",
  "byteorder",
  "clap",
  "disjoint-set",

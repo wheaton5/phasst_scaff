@@ -14,3 +14,4 @@ byteorder = "*"
 disjoint-set = "*"
 phasst_lib = {git  = "https://github.com/wheaton5/phasst_lib.git", branch= "main" }
 statrs = "*"
+bio = "*"

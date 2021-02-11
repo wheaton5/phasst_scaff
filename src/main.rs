@@ -239,7 +239,7 @@ fn phasing_consistency(
                     components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");
                     eprintln!("match in trans {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
                 } else {
-                    eprintln!("unrelated . . {} -- {} = {:?}, kmer_coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
+                    eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
                 }
             } else {
                 eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);

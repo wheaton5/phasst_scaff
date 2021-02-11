@@ -201,31 +201,35 @@ fn phasing_consistency(
         let cis = (counts.cis1 + counts.cis2) as f32;
         let trans = (counts.trans1 + counts.trans2) as f32;
         let p_value = binomial_test(cis, trans);
-        if counts.cis1 + counts.cis2 + counts.trans1 + counts.trans2 > 150 {
-            //if cis > trans && cis/(cis + trans) > 0.9 {
-            let min = (counts.cis1 + counts.cis2).min(counts.trans1 + counts.trans2) as f64;
-            let max = (counts.cis1 + counts.cis2).max(counts.trans1 + counts.trans2) as f64;
+        let contig1_kmers = assembly.molecules.get(contig1).unwrap().len() as f64;
+        let contig2_kmers = assembly.molecules.get(contig2).unwrap().len() as f64;
+        let dominant_kmers = contig1_kmers.min(contig2_kmers);
+
+        let min = (counts.cis1 + counts.cis2).min(counts.trans1 + counts.trans2) as f64;
+        let max = (counts.cis1 + counts.cis2).max(counts.trans1 + counts.trans2) as f64;
+        let coverage = max/dominant_kmers;
+        if counts.cis1 + counts.cis2 + counts.trans1 + counts.trans2 > 100 {
             if cis > trans && p_value < 0.000001 && max/(min+max) > 0.8 { // ? change? keep? test. 
                 let min = counts.cis1.min(counts.cis2) as f32;
                 if min / cis > 0.25 {
                     components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");
-                    eprintln!("match in cis {} -- {} = {:?}, p-value {}", contig1, contig2, counts, p_value);
+                    eprintln!("match in cis {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
                 } else {
-                    eprintln!("unrelated? {} -- {} = {:?}, p-value {} ", contig1, contig2, counts, p_value);
+                    eprintln!("unrelated? {} -- {} = {:?}, kmer coverage {}, p-value {} ", contig1, contig2, counts, coverage, p_value);
                 }
             } else if p_value < 0.000001 && max/(min+max) > 0.8  {
                 let min = counts.trans1.min(counts.trans2) as f32;
                 if min / trans > 0.25 {
                     components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");
-                    eprintln!("match in trans {} -- {} = {:?}, p-value {}", contig1, contig2, counts, p_value);
+                    eprintln!("match in trans {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
                 } else {
-                    eprintln!("unrelated? {} -- {} = {:?}, p-value {}", contig1, contig2, counts, p_value);
+                    eprintln!("unrelated? {} -- {} = {:?}, kmer_coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
                 }
             } else {
-                eprintln!("unrelated, output for debug {} -- {} = {:?}, p-value {}", contig1, contig2, counts, p_value);
+                eprintln!("unrelated, output for debug {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
             }
         } else {
-            eprintln!("unrelated, output for debug {} -- {} = {:?}, p-value {}", contig1, contig2, counts, p_value);
+            eprintln!("unrelated, output for debug {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
         }
     }
 

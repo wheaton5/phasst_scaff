@@ -38,12 +38,12 @@ fn main() {
     eprintln!("loading hic kmers");
     let hic_mols = load_hic(Some(&params.hic_mols), &kmers);
     eprintln!("building phasing consistency counts");
-    let (phasing_consistency_counts, scaffolds) = phasing_consistency(&hic_mols, &phasing, &kmer_contigs, &assembly);
-    output_modified_fasta(&scaffolds, &params, &assembly);
-    let ordered_scaffolds = order_and_orient(scaffolds, &hic_mols);
+    let (phasing_consistency_counts, order_and_orientation_counts, scaffolds) = phasing_consistency(&hic_mols, &phasing, &kmer_contigs, &assembly);
+    let biggest_to_smallest_scaffolds = output_modified_fasta(&scaffolds,  &params, &assembly);
+    let ordered_scaffolds = order_and_orient(biggest_to_smallest_scaffolds, order_and_orientation_counts, &hic_mols, &assembly);
 }
 
-fn output_modified_fasta(scaffolds: &Scaffold, params: &Params, assembly: &Assembly) {
+fn output_modified_fasta(scaffolds: &Scaffold,  params: &Params, assembly: &Assembly) -> Vec<Vec<i32>> {
     eprintln!("{}",params.assembly_fasta);
     let mut reader =  fasta::IndexedReader::from_file(&Path::new(&params.assembly_fasta)).expect("fasta not found");
     let mut scaffold_sizes: HashMap<usize, usize> = HashMap::new();
@@ -55,6 +55,15 @@ fn output_modified_fasta(scaffolds: &Scaffold, params: &Params, assembly: &Assem
     }
     let mut size_vec: Vec<(&usize, &usize)> = scaffold_sizes.iter().collect();
     size_vec.sort_by(|a, b| b.1.cmp(a.1));
+    let mut biggest_to_smallest_scaffolds: Vec<Vec<i32>> = Vec::new();
+    for (scaffold, _size) in size_vec.iter() {
+        let mut contigs: Vec<i32> = Vec::new();
+        for contig in scaffolds.chromosomes.get(scaffold).unwrap().iter() {
+            contigs.push(*contig);
+        }
+        biggest_to_smallest_scaffolds.push(contigs);
+    }
+
 
     let mut writer = fasta::Writer::to_file(Path::new(&format!("{}/chromosomes.fa",params.output))).expect("cannot open fasta writer");
     for (scaffold_id, (scaffold, size)) in size_vec.iter().enumerate() {
@@ -74,6 +83,7 @@ fn output_modified_fasta(scaffolds: &Scaffold, params: &Params, assembly: &Assem
             writer.write_record(&record).expect("could not write record");
         }
     }
+    biggest_to_smallest_scaffolds
 }
 
 struct OrderedScaffolds {
@@ -86,9 +96,25 @@ struct OrderedScaffold {
     gaps: Vec<usize>, // gap after each contig, will append 0 on the end to make equal length with other vecs
 }
 
-fn order_and_orient(scaffolds: Scaffold, hic_mols: &HicMols) -> OrderedScaffolds {
+fn order_and_orient(biggest_to_smallest_scaffolds: Vec<Vec<i32>>, order_orientation_counts: HashMap<(i32, i32), OrderOrient>, hic_mols: &HicMols, assembly: &Assembly) -> OrderedScaffolds {
     let mut scaffolds = OrderedScaffolds { scaffolds: Vec::new() };
-    //let length_distribution: = get_empirical_hic_distribution(hic_mols); // index is number of bases apart, value is density
+    let length_distribution = get_empirical_hic_distribution(hic_mols, assembly); // index is number of bases apart, value is density
+    for (scaffdex, scaffold) in biggest_to_smallest_scaffolds.iter().enumerate() {
+        let mut order_and_orientation_counts: HashMap<(i32, i32), [u32; 4]> = HashMap::new();
+        let mut order_and_orientation_totals: HashMap<(i32, i32), u32> = HashMap::new();
+        eprintln!("Order and Orientation counts for scaffold {}", scaffdex);
+        for contig1dex in 0..scaffold.len() {
+            let contig1 = scaffold[contig1dex];
+            for contig2dex in (contig1dex+1)..scaffold.len() {
+                let contig2 = scaffold[contig2dex];
+                let min = contig1.min(contig2);
+                let max = contig1.max(contig2);
+                let counts = order_and_orientation_counts.get(&(min, max)).unwrap();
+                eprintln!("\tcontigs {} -- {} have counts {:?}", min, max, counts);
+            }
+        }
+        
+    }
     scaffolds
 }
 
@@ -98,6 +124,14 @@ struct LengthDistribution {
 }
 
 impl LengthDistribution {
+    fn new() -> LengthDistribution {
+        let mut length_distribution: Vec<f32> = Vec::new();
+        for _index in 0..10000 {
+            length_distribution.push(0.0);
+        }
+        LengthDistribution { length_distribution: length_distribution, tail_probability: 0.0, }
+    }
+
     fn density(&self, length: usize) -> f32 {
         if length/1000 >= self.length_distribution.len() {
             self.tail_probability
@@ -107,14 +141,49 @@ impl LengthDistribution {
     }
 }
 
-fn get_empirical_hic_distribution(hic_mols: &HicMols) -> LengthDistribution {
-    let mut lengths: Vec<usize> = Vec::new();
-    let mut to_return = LengthDistribution { length_distribution: Vec::new(), tail_probability: 0.0, };
-
+fn get_empirical_hic_distribution(hic_mols: &HicMols, assembly: &Assembly) -> LengthDistribution {
+    let mut to_return = LengthDistribution::new();
+    let mut total_count = 0.0;
     for hic in hic_mols.get_hic_molecules() {
-        let contig: Option<i32> = None;
+        let mut contig: Option<i32> = None;
+        let mut min = usize::MAX;
+        let mut max = 0;
+        for var in hic {
+            if let Some((contig_id, position)) = kmer_contig_position(*var, assembly) {
+                if contig == None {
+                    contig = Some(contig_id);
+                    min = min.min(position);
+                    max = max.max(position);
+                } else if contig == Some(contig_id) {
+                    min = min.min(position);
+                    max = max.max(position);
+                }
+            }
+        }
+        if min != usize::MAX && max - min > 0 {
+            if (max-min)/1000 < to_return.length_distribution.len() {
+                to_return.length_distribution[(max-min)/1000] += 1.0;
+                total_count += 1.0;
+            }
+        }
+    }
+    for index in 0..to_return.length_distribution.len() {
+        to_return.length_distribution[index] /= total_count;
     }
     to_return
+}
+
+fn kmer_contig_position(kmer: i32, assembly: &Assembly) -> Option<(i32, usize)> {
+    if let Some((contig_id, number_seen, order, position)) = assembly.variants.get(&kmer.abs()) {
+        if *number_seen == 1 {
+            return Some((*contig_id, *position));
+        }
+    } else if let Some((contig_id, number_seen, order, position)) = assembly.variants.get(&Kmers::pair(kmer.abs())) {
+        if *number_seen == 1 {
+            return Some((*contig_id, *position));
+        }
+    }
+    None
 }
 
 struct PhasingConsistencyCounts {
@@ -152,13 +221,40 @@ struct Scaffold {
     chromosomes: HashMap<usize, Vec<i32>>,
 }
 
+struct OrderOrientPhase {
+    cis: OrderOrient,
+    trans: OrderOrient,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct OrderOrient {
+    start1_start2: u32,
+    start1_end2: u32,
+    end1_start2: u32,
+    end1_end2: u32,
+}
+
+impl OrderOrient {
+    fn new() -> OrderOrient {
+        OrderOrient{start1_start2: 0, start1_end2: 0, end1_start2: 0, end1_end2: 0}
+    }
+}
+impl OrderOrientPhase {
+    fn new() -> OrderOrientPhase {
+        OrderOrientPhase{ cis: OrderOrient::new(), trans: OrderOrient::new() }
+    }
+}
+
 fn phasing_consistency(
     hic_mols: &HicMols,
     phasing: &Phasing,
     kmer_contigs: &KmerContigs, assembly: &Assembly,
-) -> (PhasingConsistencyCounts,  Scaffold) {
+) -> (PhasingConsistencyCounts, HashMap<(i32, i32), OrderOrient>,  Scaffold) {
     let mut phasing_consistency_counts = PhasingConsistencyCounts::new();
     let mut components: DisjointSet<i32> = DisjointSet::new();
+    let mut overly_complex_data_structure: HashMap<(i32, i32), OrderOrientPhase> = HashMap::new();
+    let mut order_and_oriention_counts: HashMap<(i32, i32), OrderOrient> = HashMap::new();
+
     for (_name, id) in assembly.contig_ids.iter() {
         components.make_set(*id);
     }
@@ -166,7 +262,14 @@ fn phasing_consistency(
         for vardex1 in 0..hicmol.len() {
             let var1 = hicmol[vardex1];
             if let Some(phase1) = phasing.get_phase(&var1.abs()) {
+                let mut phase1 = phase1;
                 if let Some(contigid1) = kmer_contigs.get_contig(&var1.abs()) {
+                    let (_contig_id, number_seen, _order, position1) = assembly.variants.get(&var1.abs()).unwrap();
+                    let contig1_size = assembly.contig_sizes.get(contigid1).unwrap();
+                    let mut contig1_start_or_end = true;
+                    if (*position1 as f32)/(*contig1_size as f32) > 0.5 {
+                        contig1_start_or_end = false;
+                    }
                     for vardex2 in (vardex1 + 1)..hicmol.len() {
                         let var2 = hicmol[vardex2];
                         if let Some(contigid2) = kmer_contigs.get_contig(&var2.abs()){
@@ -174,21 +277,62 @@ fn phasing_consistency(
                                 continue;
                             }
                             if let Some(phase2) = phasing.get_phase(&var2.abs()) {
+                                let mut phase2 = phase2;
+                                let (_contig_id, number_seen, _order, position2) = assembly.variants.get(&var2.abs()).unwrap();
+                                let contig2_size = assembly.contig_sizes.get(contigid2).unwrap();
+                                let mut contig2_start_or_end = true;
+                                if (*position2 as f32)/(*contig2_size as f32) > 0.5 {
+                                    contig2_start_or_end = false;
+                                }
+                                if contigid1 > contigid2 {
+                                    let tmp = contig1_start_or_end;
+                                    contig1_start_or_end = contig2_start_or_end;
+                                    contig2_start_or_end = tmp;
+                                    let tmp = phase1;
+                                    phase1 = phase2;
+                                    phase2 = tmp;
+                                }
                                 let min = contigid1.min(contigid2);
                                 let max = contigid1.max(contigid2);
                                 let counts = phasing_consistency_counts
                                     .counts
                                     .entry((*min, *max))
                                     .or_insert(PhasingConsistency::new());
+                                let mut cis_or_trans = true;
                                 if *phase1 && *phase2 {
                                     counts.cis1 += 1;
                                 } else if *phase1 && !phase2 {
                                     counts.trans1 += 1;
+                                    cis_or_trans = false;
                                 } else if !phase1 && *phase2 {
                                     counts.trans2 += 1;
+                                    cis_or_trans = false;
                                 } else {
                                     counts.cis2 += 1;
                                 }
+                                let order_orient_phase = overly_complex_data_structure.entry((*min,*max)).or_insert(OrderOrientPhase::new());
+                                if cis_or_trans {
+                                    if contig1_start_or_end && contig2_start_or_end {
+                                        order_orient_phase.cis.start1_start2 += 1;
+                                    } else if contig1_start_or_end && !contig2_start_or_end {
+                                        order_orient_phase.cis.start1_end2 += 1;
+                                    } else if !contig1_start_or_end && contig2_start_or_end {
+                                        order_orient_phase.cis.end1_start2 += 1;
+                                    } else {
+                                        order_orient_phase.cis.end1_end2 += 1;
+                                    }
+                                } else {
+                                    if contig1_start_or_end && contig2_start_or_end {
+                                        order_orient_phase.trans.start1_start2 += 1;
+                                    } else if contig1_start_or_end && !contig2_start_or_end {
+                                        order_orient_phase.trans.start1_end2 += 1;
+                                    } else if !contig1_start_or_end && contig2_start_or_end {
+                                        order_orient_phase.trans.end1_start2 += 1;
+                                    } else {
+                                        order_orient_phase.trans.end1_end2 += 1;
+                                    }
+                                }
+
                             } 
                         } 
                     }
@@ -230,6 +374,12 @@ fn phasing_consistency(
                 if min / cis > 0.25 && coverage > coverage_threshold{
                     components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");
                     eprintln!("match in cis {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
+                    let counts = order_and_oriention_counts.entry((*contig1, *contig2)).or_insert(OrderOrient::new());
+                    let getcounts = overly_complex_data_structure.get(&(*contig1, *contig2)).unwrap();
+                    counts.start1_start2 = getcounts.cis.start1_start2;
+                    counts.start1_end2 = getcounts.cis.start1_end2;
+                    counts.end1_start2 = getcounts.cis.end1_start2;
+                    counts.end1_end2 = getcounts.cis.end1_end2;
                 } else {
                     eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {} ", contig1, contig2, counts, coverage, p_value);
                 }
@@ -238,6 +388,12 @@ fn phasing_consistency(
                 if min / trans > 0.25  && coverage > coverage_threshold {
                     components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");
                     eprintln!("match in trans {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
+                    let counts = order_and_oriention_counts.entry((*contig1, *contig2)).or_insert(OrderOrient::new());
+                    let getcounts = overly_complex_data_structure.get(&(*contig1, *contig2)).unwrap();
+                    counts.start1_start2 = getcounts.trans.start1_start2;
+                    counts.start1_end2 = getcounts.trans.start1_end2;
+                    counts.end1_start2 = getcounts.trans.end1_start2;
+                    counts.end1_end2 = getcounts.trans.end1_end2;
                 } else {
                     eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
                 }
@@ -266,7 +422,7 @@ fn phasing_consistency(
         eprintln!("scaffold {} size {}", component, size);
     }
 
-    (phasing_consistency_counts, Scaffold { chromosomes: scaffolds} )
+    (phasing_consistency_counts, order_and_oriention_counts, Scaffold { chromosomes: scaffolds} )
 }
 
 fn binomial_test(cis: f32, trans: f32) -> f64 {

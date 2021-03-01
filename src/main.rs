@@ -264,10 +264,11 @@ fn phasing_consistency(
             if let Some(phase1) = phasing.get_phase(&var1.abs()) {
                 let mut phase1 = phase1;
                 if let Some(contigid1) = kmer_contigs.get_contig(&var1.abs()) {
-                    let (_contig_id, number_seen, _order, position1) = assembly.variants.get(&var1.abs()).unwrap();
+                    //let (_contig_id, _number_seen, _order, position1) = assembly.variants.get(&var1.abs()).unwrap();
+                    let (_contig_id, position1) = kmer_contig_position(var1.abs(), assembly).expect("why");
                     let contig1_size = assembly.contig_sizes.get(contigid1).unwrap();
                     let mut contig1_start_or_end = true;
-                    if (*position1 as f32)/(*contig1_size as f32) > 0.5 {
+                    if (position1 as f32)/(*contig1_size as f32) > 0.5 {
                         contig1_start_or_end = false;
                     }
                     for vardex2 in (vardex1 + 1)..hicmol.len() {
@@ -278,10 +279,11 @@ fn phasing_consistency(
                             }
                             if let Some(phase2) = phasing.get_phase(&var2.abs()) {
                                 let mut phase2 = phase2;
-                                let (_contig_id, number_seen, _order, position2) = assembly.variants.get(&var2.abs()).unwrap();
+                                //let (_contig_id, _number_seen, _order, position2) = assembly.variants.get(&var2.abs()).unwrap();
+                                let (_contig_id, position2) = kmer_contig_position(var2.abs(), assembly).expect("why");
                                 let contig2_size = assembly.contig_sizes.get(contigid2).unwrap();
                                 let mut contig2_start_or_end = true;
-                                if (*position2 as f32)/(*contig2_size as f32) > 0.5 {
+                                if (position2 as f32)/(*contig2_size as f32) > 0.5 {
                                     contig2_start_or_end = false;
                                 }
                                 if contigid1 > contigid2 {

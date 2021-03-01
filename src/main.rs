@@ -259,11 +259,11 @@ fn phasing_consistency(
     for (_kmer, (contig_id, number_seen, _order, position)) in assembly.variants.iter() {
         if *number_seen == 1 {
             let contig_size = assembly.contig_sizes.get(contig_id).unwrap();
-            if (*position as f32)/(*contig_size as f32) > 0.5 {
-                let count = num_assembly_kmers_start_end.entry((*contig_id, false)).or_insert(0.0);
-                *count += 1.0;
-            } else {
+            if *position < 100000 {
                 let count = num_assembly_kmers_start_end.entry((*contig_id, true)).or_insert(0.0);
+                *count += 1.0;
+            } else if contig_size - position < 100000 {
+                let count = num_assembly_kmers_start_end.entry((*contig_id, false)).or_insert(0.0);
                 *count += 1.0;
             }
         }
@@ -281,9 +281,11 @@ fn phasing_consistency(
                     //let (_contig_id, _number_seen, _order, position1) = assembly.variants.get(&var1.abs()).unwrap();
                     let (_contig_id, position1) = kmer_contig_position(var1.abs(), assembly).expect("why");
                     let contig1_size = assembly.contig_sizes.get(contigid1).unwrap();
-                    let mut contig1_start_or_end = true;
-                    if (position1 as f32)/(*contig1_size as f32) > 0.5 {
-                        contig1_start_or_end = false;
+                    let mut contig1_start_or_end = None;
+                    if *contig1_size - position1 < 100000 {
+                        contig1_start_or_end = Some(false);
+                    } else if position1 < 100000 {
+                        contig1_start_or_end = Some(true);
                     }
                     for vardex2 in (vardex1 + 1)..hicmol.len() {
                         let var2 = hicmol[vardex2];
@@ -296,9 +298,12 @@ fn phasing_consistency(
                                 //let (_contig_id, _number_seen, _order, position2) = assembly.variants.get(&var2.abs()).unwrap();
                                 let (_contig_id, position2) = kmer_contig_position(var2.abs(), assembly).expect("why");
                                 let contig2_size = assembly.contig_sizes.get(contigid2).unwrap();
-                                let mut contig2_start_or_end = true;
-                                if (position2 as f32)/(*contig2_size as f32) > 0.5 {
-                                    contig2_start_or_end = false;
+                                let mut contig2_start_or_end = None;
+                                //if (position2 as f32)/(*contig2_size as f32) > 0.5 {
+                                if *contig2_size - position2 < 100000 {
+                                    contig2_start_or_end = Some(false);
+                                } else if position2 < 100000 {
+                                    contig2_start_or_end = Some(true);
                                 }
                                 if contigid1 > contigid2 {
                                     let tmp = contig1_start_or_end;
@@ -327,35 +332,38 @@ fn phasing_consistency(
                                     counts.cis2 += 1;
                                 }
                                 let order_orient_phase = overly_complex_data_structure.entry((*min,*max)).or_insert(OrderOrientPhase::new());
-                                if cis_or_trans {
-                                    if contig1_start_or_end && contig2_start_or_end {
-                                        order_orient_phase.cis.start1_start2 += 1;
-                                    } else if contig1_start_or_end && !contig2_start_or_end {
-                                        order_orient_phase.cis.start1_end2 += 1;
-                                    } else if !contig1_start_or_end && contig2_start_or_end {
-                                        order_orient_phase.cis.end1_start2 += 1;
-                                    } else {
-                                        order_orient_phase.cis.end1_end2 += 1;
-                                    }
-                                } else {
-                                    if contig1_start_or_end && contig2_start_or_end {
-                                        order_orient_phase.trans.start1_start2 += 1;
-                                    } else if contig1_start_or_end && !contig2_start_or_end {
-                                        order_orient_phase.trans.start1_end2 += 1;
-                                    } else if !contig1_start_or_end && contig2_start_or_end {
-                                        order_orient_phase.trans.end1_start2 += 1;
-                                    } else {
-                                        order_orient_phase.trans.end1_end2 += 1;
-                                    }
-                                }
-
-                            } 
-                        } 
-                    }
-                } 
-            } 
-        }
-    }
+                                if let Some(contig1_se) = contig1_start_or_end {
+                                    if let Some(contig2_se) = contig2_start_or_end {
+                                        if cis_or_trans {
+                                            if contig1_se && contig2_se {
+                                                order_orient_phase.cis.start1_start2 += 1;
+                                            } else if contig1_se && !contig2_se {
+                                                order_orient_phase.cis.start1_end2 += 1;
+                                            } else if !contig1_se && contig2_se {
+                                                order_orient_phase.cis.end1_start2 += 1;
+                                            } else {
+                                                order_orient_phase.cis.end1_end2 += 1;
+                                            }   
+                                        } else {
+                                            if contig1_se && contig2_se {
+                                                order_orient_phase.trans.start1_start2 += 1;
+                                            } else if contig1_se && !contig2_se {
+                                                order_orient_phase.trans.start1_end2 += 1;
+                                            } else if !contig1_se && contig2_se {
+                                                order_orient_phase.trans.end1_start2 += 1;
+                                            } else {
+                                                order_orient_phase.trans.end1_end2 += 1;
+                                            }
+                                        } // end cis or trans
+                                    } // end let Some(contig1_se)
+                                } // end let Some(contig2_se)
+                            } // end let Some(phase2)
+                        } // end contig2_id 
+                    } // end var2dex
+                } // end contig1_id
+            } // end phase1
+        } // end var1dex
+    } // end hic read loop
     
     let mut kmer_coverages: Vec<f64> = Vec::new();
     for ((contig1, contig2), counts) in phasing_consistency_counts.counts.iter() {

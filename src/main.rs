@@ -40,7 +40,7 @@ fn main() {
     eprintln!("building phasing consistency counts");
     let (phasing_consistency_counts, order_and_orientation_counts, scaffolds) = phasing_consistency(&hic_mols, &phasing, &kmer_contigs, &assembly);
     let biggest_to_smallest_scaffolds = output_modified_fasta(&scaffolds,  &params, &assembly);
-    let ordered_scaffolds = order_and_orient(biggest_to_smallest_scaffolds, order_and_orientation_counts, &hic_mols, &assembly);
+    //let ordered_scaffolds = order_and_orient(biggest_to_smallest_scaffolds, order_and_orientation_counts, &hic_mols, &assembly);
 }
 
 fn output_modified_fasta(scaffolds: &Scaffold,  params: &Params, assembly: &Assembly) -> Vec<Vec<i32>> {
@@ -382,6 +382,7 @@ fn phasing_consistency(
                     counts.start1_end2 = getcounts.cis.start1_end2;
                     counts.end1_start2 = getcounts.cis.end1_start2;
                     counts.end1_end2 = getcounts.cis.end1_end2;
+                    eprintln!("\torder and orientation counts {:?}", counts);
                 } else {
                     eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {} ", contig1, contig2, counts, coverage, p_value);
                 }
@@ -396,6 +397,7 @@ fn phasing_consistency(
                     counts.start1_end2 = getcounts.trans.start1_end2;
                     counts.end1_start2 = getcounts.trans.end1_start2;
                     counts.end1_end2 = getcounts.trans.end1_end2;
+                    eprintln!("\torder and orientation counts {:?}", counts);
                 } else {
                     eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
                 }

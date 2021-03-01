@@ -255,6 +255,20 @@ fn phasing_consistency(
     let mut overly_complex_data_structure: HashMap<(i32, i32), OrderOrientPhase> = HashMap::new();
     let mut order_and_oriention_counts: HashMap<(i32, i32), OrderOrient> = HashMap::new();
 
+    let mut num_assembly_kmers_start_end: HashMap<(i32, bool),f32> = HashMap::new();
+    for (_kmer, (contig_id, number_seen, _order, position)) in assembly.variants.iter() {
+        if *number_seen == 1 {
+            let contig_size = assembly.contig_sizes.get(contig_id).unwrap();
+            if (*position as f32)/(*contig_size as f32) > 0.5 {
+                let count = num_assembly_kmers_start_end.entry((*contig_id, false)).or_insert(0.0);
+                *count += 1.0;
+            } else {
+                let count = num_assembly_kmers_start_end.entry((*contig_id, true)).or_insert(0.0);
+                *count += 1.0;
+            }
+        }
+    }
+
     for (_name, id) in assembly.contig_ids.iter() {
         components.make_set(*id);
     }
@@ -347,7 +361,7 @@ fn phasing_consistency(
     for ((contig1, contig2), counts) in phasing_consistency_counts.counts.iter() {
         let cis = (counts.cis1 + counts.cis2) as f32;
         let trans = (counts.trans1 + counts.trans2) as f32;
-        let min = (cis).min(trans) as f64;
+        //let min = (cis).min(trans) as f64;
         let max = (cis).max(trans) as f64;
         let contig1_kmers = assembly.molecules.get(contig1).unwrap().len() as f64;
         let contig2_kmers = assembly.molecules.get(contig2).unwrap().len() as f64;
@@ -376,12 +390,17 @@ fn phasing_consistency(
                 if min / cis > 0.25 && coverage > coverage_threshold{
                     components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");
                     eprintln!("match in cis {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
-                    let counts = order_and_oriention_counts.entry((*contig1, *contig2)).or_insert(OrderOrient::new());
+                    //let counts = order_and_oriention_counts.entry((*contig1, *contig2)).or_insert(OrderOrient::new());
+                    let mut counts: [f32;4] = [0.0;4];
                     let getcounts = overly_complex_data_structure.get(&(*contig1, *contig2)).unwrap();
-                    counts.start1_start2 = getcounts.cis.start1_start2;
-                    counts.start1_end2 = getcounts.cis.start1_end2;
-                    counts.end1_start2 = getcounts.cis.end1_start2;
-                    counts.end1_end2 = getcounts.cis.end1_end2;
+                    let start1 = *num_assembly_kmers_start_end.get(&(*contig1, true)).unwrap();
+                    let end1 = *num_assembly_kmers_start_end.get(&(*contig1, false)).unwrap();
+                    let start2 = *num_assembly_kmers_start_end.get(&(*contig2, true)).unwrap();
+                    let end2 = *num_assembly_kmers_start_end.get(&(*contig2, false)).unwrap();
+                    counts[0] = (getcounts.cis.start1_start2 as f32)/(start1.min(start2));
+                    counts[1] = (getcounts.cis.start1_end2 as f32)/(start1.min(end2));
+                    counts[2] = (getcounts.cis.end1_start2 as f32)/(end1.min(start2));
+                    counts[3] = (getcounts.cis.end1_end2 as f32)/(end1.min(end2));
                     eprintln!("\torder and orientation counts {:?}", counts);
                 } else {
                     eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {} ", contig1, contig2, counts, coverage, p_value);
@@ -391,12 +410,17 @@ fn phasing_consistency(
                 if min / trans > 0.25  && coverage > coverage_threshold {
                     components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");
                     eprintln!("match in trans {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
-                    let counts = order_and_oriention_counts.entry((*contig1, *contig2)).or_insert(OrderOrient::new());
+                    //let counts = order_and_oriention_counts.entry((*contig1, *contig2)).or_insert(OrderOrient::new());
+                    let mut counts: [f32;4] = [0.0;4];
                     let getcounts = overly_complex_data_structure.get(&(*contig1, *contig2)).unwrap();
-                    counts.start1_start2 = getcounts.trans.start1_start2;
-                    counts.start1_end2 = getcounts.trans.start1_end2;
-                    counts.end1_start2 = getcounts.trans.end1_start2;
-                    counts.end1_end2 = getcounts.trans.end1_end2;
+                    let start1 = *num_assembly_kmers_start_end.get(&(*contig1, true)).unwrap();
+                    let end1 = *num_assembly_kmers_start_end.get(&(*contig1, false)).unwrap();
+                    let start2 = *num_assembly_kmers_start_end.get(&(*contig2, true)).unwrap();
+                    let end2 = *num_assembly_kmers_start_end.get(&(*contig2, false)).unwrap();
+                    counts[0] = (getcounts.trans.start1_start2 as f32)/(start1.min(start2));
+                    counts[1] = (getcounts.trans.start1_end2 as f32)/(start1.min(end2));
+                    counts[2] = (getcounts.trans.end1_start2 as f32)/(end1.min(start2));
+                    counts[3] = (getcounts.trans.end1_end2 as f32)/(end1.min(end2));
                     eprintln!("\torder and orientation counts {:?}", counts);
                 } else {
                     eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);

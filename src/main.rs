@@ -174,11 +174,11 @@ fn get_empirical_hic_distribution(hic_mols: &HicMols, assembly: &Assembly) -> Le
 }
 
 fn kmer_contig_position(kmer: i32, assembly: &Assembly) -> Option<(i32, usize)> {
-    if let Some((contig_id, number_seen, order, position)) = assembly.variants.get(&kmer.abs()) {
+    if let Some((contig_id, number_seen, _order, position)) = assembly.variants.get(&kmer.abs()) {
         if *number_seen == 1 {
             return Some((*contig_id, *position));
         }
-    } else if let Some((contig_id, number_seen, order, position)) = assembly.variants.get(&Kmers::pair(kmer.abs())) {
+    } else if let Some((contig_id, number_seen, _order, position)) = assembly.variants.get(&Kmers::pair(kmer.abs())) {
         if *number_seen == 1 {
             return Some((*contig_id, *position));
         }
@@ -397,7 +397,8 @@ fn phasing_consistency(
                 let min = counts.cis1.min(counts.cis2) as f32;
                 if min / cis > 0.25 && coverage > coverage_threshold{
                     components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");
-                    eprintln!("match in cis {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
+                    eprintln!("match in cis {} -- {} = {:?}, kmer coverage {}, p-value {}", assembly.contig_names[*contig1 as usize], 
+                        assembly.contig_names[*contig2 as usize], counts, coverage, p_value);
                     //let counts = order_and_oriention_counts.entry((*contig1, *contig2)).or_insert(OrderOrient::new());
                     let mut counts: [f32;4] = [0.0;4];
                     let getcounts = overly_complex_data_structure.get(&(*contig1, *contig2)).unwrap();
@@ -411,7 +412,9 @@ fn phasing_consistency(
                     counts[3] = (getcounts.cis.end1_end2 as f32)/(end1.min(end2));
                     eprintln!("\torder and orientation counts {:?}", counts);
                 } else {
-                    eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {} ", contig1, contig2, counts, coverage, p_value);
+                    eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {} ", 
+                        assembly.contig_names[*contig1 as usize], assembly.contig_names[*contig2 as usize], 
+                        counts, coverage, p_value);
                 }
             } else if p_value < 0.000001 && max/(min+max) > 0.8  {
                 let min = counts.trans1.min(counts.trans2) as f32;

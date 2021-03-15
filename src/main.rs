@@ -420,7 +420,8 @@ fn phasing_consistency(
                 let min = counts.trans1.min(counts.trans2) as f32;
                 if min / trans > 0.25  && coverage > coverage_threshold {
                     components.union(*contig1, *contig2).expect("unable to merge, is this node in the set?");
-                    eprintln!("match in trans {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
+                    eprintln!("match in trans {} -- {} = {:?}, kmer coverage {}, p-value {}", 
+                        assembly.contig_names[*contig1 as usize], assembly.contig_names[*contig2 as usize], counts, coverage, p_value);
                     //let counts = order_and_oriention_counts.entry((*contig1, *contig2)).or_insert(OrderOrient::new());
                     let mut counts: [f32;4] = [0.0;4];
                     let getcounts = overly_complex_data_structure.get(&(*contig1, *contig2)).unwrap();
@@ -434,13 +435,16 @@ fn phasing_consistency(
                     counts[3] = (getcounts.trans.end1_end2 as f32)/(end1.min(end2));
                     eprintln!("\torder and orientation counts {:?}", counts);
                 } else {
-                    eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
+                    eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {}", assembly.contig_names[*contig1 as usize], 
+                    assembly.contig_names[*contig2 as usize], counts, coverage, p_value);
                 }
             } else {
-                eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
+                eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {}", 
+                assembly.contig_names[*contig1 as usize], assembly.contig_names[*contig2 as usize], counts, coverage, p_value);
             }
         } else {
-            eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {}", contig1, contig2, counts, coverage, p_value);
+            eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {}", 
+            assembly.contig_names[*contig1 as usize], assembly.contig_names[*contig2 as usize], counts, coverage, p_value);
         }
     }
 

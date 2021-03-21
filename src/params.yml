@@ -18,17 +18,15 @@ args:
     - linked_read_barcodes:
         long: linked_read_barcodes
         short: l
-        multiple: true
         takes_value: true
         required: false
-        help: 10x genomics linked read kmers as output of from molecule_kmers
+        help: 10x genomics linked read kmers fofn as output of from molecule_kmers
     - hic_mols:
         long: hic_mols
         short: h
-        multiple: true
         required: true
         takes_value: true
-        help: hic kmers as output from molecule_kmers
+        help: hic kmers as fofn output from molecule_kmers
     - assembly_fasta:
         short: f
         long: assembly_fasta

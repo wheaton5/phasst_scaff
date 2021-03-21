@@ -567,21 +567,33 @@ fn load_params() -> Params {
     let params = App::from_yaml(yaml).get_matches();
     let het_kmers = params.value_of("het_kmers").unwrap();
     let output = params.value_of("output").unwrap();
-    let txg_tmp = match params.values_of("txg_mols") {
-        Some(x) => x.collect(),
-        None => Vec::new(),
-    };
-    let mut linked_read_kmers: Vec<String> = Vec::new();
-    for x in txg_tmp {
-        linked_read_kmers.push(x.to_string());
+    let mut txg_mols: Vec<String> = Vec::new();
+    match params.value_of("linked_read_barcodes") {
+        Some(txg_fofn) => {
+            let f = File::open(txg_fofn).expect("Unable to open txg fofn");
+            let f = BufReader::new(f);
+
+            for line in f.lines() {
+                let line = line.expect("Unable to read txg fofn line");
+                txg_mols.push(line.to_string());
+            }
+        },
+        None => (),
     }
-    let hic_tmp = match params.values_of("hic_mols") {
-        Some(x) => x.collect(),
-        None => Vec::new(),
-    };
+
+
     let mut hic_mols: Vec<String> = Vec::new();
-    for x in hic_tmp {
-        hic_mols.push(x.to_string());
+    match params.value_of("hic_mols") {
+        Some(hic_fofn) => {
+            let f = File::open(hic_fofn).expect("Unable to open hic fofn");
+            let f = BufReader::new(f);
+
+            for line in f.lines() {
+                let line = line.expect("Unable to read txg fofn line");
+                hic_mols.push(line.to_string());
+            }
+        },
+        None => (),
     }
 
     let assembly_kmers = params.value_of("assembly_kmers").unwrap();
@@ -590,7 +602,7 @@ fn load_params() -> Params {
     Params {
         het_kmers: het_kmers.to_string(),
         output: output.to_string(),
-        linked_read_kmers: linked_read_kmers,
+        linked_read_kmers: txg_mols,
         hic_mols: hic_mols,
         assembly_kmers: assembly_kmers.to_string(),
         assembly_fasta: assembly_fasta.to_string(),

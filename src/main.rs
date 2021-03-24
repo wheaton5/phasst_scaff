@@ -36,9 +36,9 @@ fn main() {
     let assembly = load_assembly_kmers(&params.assembly_kmers, &params.assembly_fasta, &kmers);
     let (phasing, kmer_contigs) = load_phased_vcf(&params.phased_vcf, &kmers, &assembly);
     eprintln!("loading hic kmers");
-    let hic_mols = load_hic(Some(&params.hic_mols), &kmers);
+    let hic_mols = load_hic(Some(&params.hic_mols), &kmers, false);
     eprintln!("building phasing consistency counts");
-    let (phasing_consistency_counts, order_and_orientation_counts, scaffolds) = phasing_consistency(&hic_mols, &phasing, &kmer_contigs, &assembly);
+    let (phasing_consistency_counts, scaffolds) = phasing_consistency(&hic_mols, &phasing, &kmer_contigs, &assembly);
     let biggest_to_smallest_scaffolds = output_modified_fasta(&scaffolds,  &params, &assembly);
     //let ordered_scaffolds = order_and_orient(biggest_to_smallest_scaffolds, order_and_orientation_counts, &hic_mols, &assembly);
 }
@@ -248,7 +248,7 @@ fn phasing_consistency(
     hic_mols: &HicMols,
     phasing: &Phasing,
     kmer_contigs: &KmerContigs, assembly: &Assembly,
-) -> (PhasingConsistencyCounts, HashMap<(i32, i32), OrderOrient>,  Scaffold) {
+) -> (PhasingConsistencyCounts,  Scaffold) {
     let mut phasing_consistency_counts = PhasingConsistencyCounts::new();
     let mut components: DisjointSet<i32> = DisjointSet::new();
     let mut overly_complex_data_structure: HashMap<(i32, i32), OrderOrientPhase> = HashMap::new();
@@ -465,7 +465,7 @@ fn phasing_consistency(
         eprintln!("scaffold {} size {}", component, size);
     }
 
-    (phasing_consistency_counts, order_and_oriention_counts, Scaffold { chromosomes: scaffolds} )
+    (phasing_consistency_counts, Scaffold { chromosomes: scaffolds} )
 }
 
 fn binomial_test(cis: f32, trans: f32) -> f64 {

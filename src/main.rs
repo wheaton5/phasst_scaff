@@ -405,10 +405,10 @@ fn phasing_consistency(
                     let end1 = *num_assembly_kmers_start_end.get(&(*contig1, false)).unwrap();
                     let start2 = *num_assembly_kmers_start_end.get(&(*contig2, true)).unwrap();
                     let end2 = *num_assembly_kmers_start_end.get(&(*contig2, false)).unwrap();
-                    counts[0] = (getcounts.cis.start1_start2 as f32);///(start1.min(start2));
-                    counts[1] = (getcounts.cis.start1_end2 as f32);///(start1.min(end2));
-                    counts[2] = (getcounts.cis.end1_start2 as f32);///(end1.min(start2));
-                    counts[3] = (getcounts.cis.end1_end2 as f32);///(end1.min(end2));
+                    counts[0] = (getcounts.cis.start1_start2 as f32);//(start1.min(start2));
+                    counts[1] = (getcounts.cis.start1_end2 as f32);//(start1.min(end2));
+                    counts[2] = (getcounts.cis.end1_start2 as f32);//(end1.min(start2));
+                    counts[3] = (getcounts.cis.end1_end2 as f32);//(end1.min(end2));
                     eprintln!("\torder and orientation counts {:?}", counts);
                 } else {
                     eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {} ", 
@@ -428,10 +428,11 @@ fn phasing_consistency(
                     let end1 = *num_assembly_kmers_start_end.get(&(*contig1, false)).unwrap();
                     let start2 = *num_assembly_kmers_start_end.get(&(*contig2, true)).unwrap();
                     let end2 = *num_assembly_kmers_start_end.get(&(*contig2, false)).unwrap();
-                    counts[0] = (getcounts.trans.start1_start2 as f32);///(start1.min(start2));
-                    counts[1] = (getcounts.trans.start1_end2 as f32);///(start1.min(end2));
-                    counts[2] = (getcounts.trans.end1_start2 as f32);///(end1.min(start2));
-                    counts[3] = (getcounts.trans.end1_end2 as f32);///(end1.min(end2));
+                    counts[0] = (getcounts.trans.start1_start2 as f32);//(start1.min(start2));
+
+                    counts[1] = (getcounts.trans.start1_end2 as f32);//(start1.min(end2));
+                    counts[2] = (getcounts.trans.end1_start2 as f32);//(end1.min(start2));
+                    counts[3] = (getcounts.trans.end1_end2 as f32);//(end1.min(end2));
                     eprintln!("\torder and orientation counts {:?}", counts);
                 } else {
                     eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {}", assembly.contig_names[*contig1 as usize], 

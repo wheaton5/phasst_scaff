@@ -36,9 +36,9 @@ fn main() {
     let assembly = load_assembly_kmers(&params.assembly_kmers, &params.assembly_fasta, &kmers);
     let (phasing, kmer_contigs) = load_phased_vcf(&params.phased_vcf, &kmers, &assembly);
     eprintln!("loading hic kmers");
-    let hic_mols = load_hic(Some(&params.hic_mols), &kmers);
+    let hic_mols = load_hic(Some(&params.hic_mols), &kmers, false);
     eprintln!("building phasing consistency counts");
-    let (phasing_consistency_counts, order_and_orientation_counts, scaffolds) = phasing_consistency(&hic_mols, &phasing, &kmer_contigs, &assembly);
+    let (phasing_consistency_counts, scaffolds) = phasing_consistency(&hic_mols, &phasing, &kmer_contigs, &assembly);
     let biggest_to_smallest_scaffolds = output_modified_fasta(&scaffolds,  &params, &assembly);
     //let ordered_scaffolds = order_and_orient(biggest_to_smallest_scaffolds, order_and_orientation_counts, &hic_mols, &assembly);
 }
@@ -113,7 +113,6 @@ fn order_and_orient(biggest_to_smallest_scaffolds: Vec<Vec<i32>>, order_orientat
                 eprintln!("\tcontigs {} -- {} have counts {:?}", min, max, counts);
             }
         }
-        
     }
     scaffolds
 }
@@ -249,11 +248,11 @@ fn phasing_consistency(
     hic_mols: &HicMols,
     phasing: &Phasing,
     kmer_contigs: &KmerContigs, assembly: &Assembly,
-) -> (PhasingConsistencyCounts, HashMap<(i32, i32), OrderOrient>,  Scaffold) {
+) -> (PhasingConsistencyCounts,  Scaffold) {
     let mut phasing_consistency_counts = PhasingConsistencyCounts::new();
     let mut components: DisjointSet<i32> = DisjointSet::new();
     let mut overly_complex_data_structure: HashMap<(i32, i32), OrderOrientPhase> = HashMap::new();
-    let mut order_and_oriention_counts: HashMap<(i32, i32), OrderOrient> = HashMap::new();
+    //let mut order_and_oriention_counts: HashMap<(i32, i32), OrderOrient> = HashMap::new();
 
     let mut num_assembly_kmers_start_end: HashMap<(i32, bool),f32> = HashMap::new();
     for (_kmer, (contig_id, number_seen, _order, position)) in assembly.variants.iter() {
@@ -409,10 +408,10 @@ fn phasing_consistency(
                     let end1 = *num_assembly_kmers_start_end.get(&(*contig1, false)).unwrap();
                     let start2 = *num_assembly_kmers_start_end.get(&(*contig2, true)).unwrap();
                     let end2 = *num_assembly_kmers_start_end.get(&(*contig2, false)).unwrap();
-                    counts[0] = (getcounts.cis.start1_start2 as f32)/(start1.min(start2));
-                    counts[1] = (getcounts.cis.start1_end2 as f32)/(start1.min(end2));
-                    counts[2] = (getcounts.cis.end1_start2 as f32)/(end1.min(start2));
-                    counts[3] = (getcounts.cis.end1_end2 as f32)/(end1.min(end2));
+                    counts[0] = (getcounts.cis.start1_start2 as f32);//(start1.min(start2));
+                    counts[1] = (getcounts.cis.start1_end2 as f32);//(start1.min(end2));
+                    counts[2] = (getcounts.cis.end1_start2 as f32);//(end1.min(start2));
+                    counts[3] = (getcounts.cis.end1_end2 as f32);//(end1.min(end2));
                     eprintln!("\torder and orientation counts {:?}", counts);
                 } else {
                     eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {} ", 
@@ -432,10 +431,11 @@ fn phasing_consistency(
                     let end1 = *num_assembly_kmers_start_end.get(&(*contig1, false)).unwrap();
                     let start2 = *num_assembly_kmers_start_end.get(&(*contig2, true)).unwrap();
                     let end2 = *num_assembly_kmers_start_end.get(&(*contig2, false)).unwrap();
-                    counts[0] = (getcounts.trans.start1_start2 as f32)/(start1.min(start2));
-                    counts[1] = (getcounts.trans.start1_end2 as f32)/(start1.min(end2));
-                    counts[2] = (getcounts.trans.end1_start2 as f32)/(end1.min(start2));
-                    counts[3] = (getcounts.trans.end1_end2 as f32)/(end1.min(end2));
+                    counts[0] = (getcounts.trans.start1_start2 as f32);//(start1.min(start2));
+
+                    counts[1] = (getcounts.trans.start1_end2 as f32);//(start1.min(end2));
+                    counts[2] = (getcounts.trans.end1_start2 as f32);//(end1.min(start2));
+                    counts[3] = (getcounts.trans.end1_end2 as f32);//(end1.min(end2));
                     eprintln!("\torder and orientation counts {:?}", counts);
                 } else {
                     eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {}", assembly.contig_names[*contig1 as usize], 
@@ -468,12 +468,11 @@ fn phasing_consistency(
         eprintln!("scaffold {} size {}", component, size);
     }
 
-    (phasing_consistency_counts, order_and_oriention_counts, Scaffold { chromosomes: scaffolds} )
+    (phasing_consistency_counts, Scaffold { chromosomes: scaffolds} )
 }
 
 fn binomial_test(cis: f32, trans: f32) -> f64 {
     let min = cis.min(trans) as f64;
-    let max = cis.max(trans) as f64;
     let n = Binomial::new(0.5, (cis+trans) as u64).unwrap();
     let p_value = n.cdf(min) * 2.0;
     p_value

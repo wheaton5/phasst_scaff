@@ -373,8 +373,8 @@ fn phasing_consistency(
         let trans = (counts.trans1 + counts.trans2) as f32;
         //let min = (cis).min(trans) as f64;
         let max = (cis).max(trans) as f64;
-        let contig1_kmers = assembly.molecules.get(contig1).unwrap().len() as f64;
-        let contig2_kmers = assembly.molecules.get(contig2).unwrap().len() as f64;
+        let contig1_kmers = assembly.molecules.get(contig1).expect(format!("couldnt load contig {}", contig1)).len() as f64;
+        let contig2_kmers = assembly.molecules.get(contig2).expect(format!("couldnt load contig {}", contig2)).len() as f64;
         let dominant_kmers = contig1_kmers.min(contig2_kmers);
         let coverage = max/dominant_kmers;
         kmer_coverages.push(coverage);

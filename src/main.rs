@@ -373,8 +373,8 @@ fn phasing_consistency(
         let trans = (counts.trans1 + counts.trans2) as f32;
         //let min = (cis).min(trans) as f64;
         let max = (cis).max(trans) as f64;
-        let contig1_kmers = assembly.molecules.get(contig1).expect(&format!("couldnt load contig {}", contig1)).len() as f64;
-        let contig2_kmers = assembly.molecules.get(contig2).expect(&format!("couldnt load contig {}", contig2)).len() as f64;
+        let contig1_kmers = assembly.molecules.get(contig1).expect(&format!("couldnt load contig {}", assembly.contig_names[*contig1 as usize])).len() as f64;
+        let contig2_kmers = assembly.molecules.get(contig2).expect(&format!("couldnt load contig {}", assembly.contig_names[*contig2 as usize])).len() as f64;
         let dominant_kmers = contig1_kmers.min(contig2_kmers);
         let coverage = max/dominant_kmers;
         kmer_coverages.push(coverage);
@@ -404,14 +404,14 @@ fn phasing_consistency(
                     //let counts = order_and_oriention_counts.entry((*contig1, *contig2)).or_insert(OrderOrient::new());
                     let mut counts: [f32;4] = [0.0;4];
                     let getcounts = overly_complex_data_structure.get(&(*contig1, *contig2)).unwrap();
-                    let start1 = *num_assembly_kmers_start_end.get(&(*contig1, true)).unwrap();
-                    let end1 = *num_assembly_kmers_start_end.get(&(*contig1, false)).unwrap();
-                    let start2 = *num_assembly_kmers_start_end.get(&(*contig2, true)).unwrap();
-                    let end2 = *num_assembly_kmers_start_end.get(&(*contig2, false)).unwrap();
-                    counts[0] = (getcounts.cis.start1_start2 as f32);//(start1.min(start2));
-                    counts[1] = (getcounts.cis.start1_end2 as f32);//(start1.min(end2));
-                    counts[2] = (getcounts.cis.end1_start2 as f32);//(end1.min(start2));
-                    counts[3] = (getcounts.cis.end1_end2 as f32);//(end1.min(end2));
+                    //let start1 = *num_assembly_kmers_start_end.get(&(*contig1, true)).unwrap();
+                    //let end1 = *num_assembly_kmers_start_end.get(&(*contig1, false)).unwrap();
+                    //let start2 = *num_assembly_kmers_start_end.get(&(*contig2, true)).unwrap();
+                    //let end2 = *num_assembly_kmers_start_end.get(&(*contig2, false)).unwrap();
+                    counts[0] = getcounts.cis.start1_start2 as f32;//(start1.min(start2));
+                    counts[1] = getcounts.cis.start1_end2 as f32;//(start1.min(end2));
+                    counts[2] = getcounts.cis.end1_start2 as f32;//(end1.min(start2));
+                    counts[3] = getcounts.cis.end1_end2 as f32;//(end1.min(end2));
                     eprintln!("\torder and orientation counts {:?}", counts);
                 } else {
                     eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {} ", 
@@ -427,15 +427,15 @@ fn phasing_consistency(
                     //let counts = order_and_oriention_counts.entry((*contig1, *contig2)).or_insert(OrderOrient::new());
                     let mut counts: [f32;4] = [0.0;4];
                     let getcounts = overly_complex_data_structure.get(&(*contig1, *contig2)).unwrap();
-                    let start1 = *num_assembly_kmers_start_end.get(&(*contig1, true)).unwrap();
-                    let end1 = *num_assembly_kmers_start_end.get(&(*contig1, false)).unwrap();
-                    let start2 = *num_assembly_kmers_start_end.get(&(*contig2, true)).unwrap();
-                    let end2 = *num_assembly_kmers_start_end.get(&(*contig2, false)).unwrap();
-                    counts[0] = (getcounts.trans.start1_start2 as f32);//(start1.min(start2));
+                    //let start1 = *num_assembly_kmers_start_end.get(&(*contig1, true)).unwrap();
+                    //let end1 = *num_assembly_kmers_start_end.get(&(*contig1, false)).unwrap();
+                    //let start2 = *num_assembly_kmers_start_end.get(&(*contig2, true)).unwrap();
+                    //let end2 = *num_assembly_kmers_start_end.get(&(*contig2, false)).unwrap();
+                    counts[0] = getcounts.trans.start1_start2 as f32;//(start1.min(start2));
 
-                    counts[1] = (getcounts.trans.start1_end2 as f32);//(start1.min(end2));
-                    counts[2] = (getcounts.trans.end1_start2 as f32);//(end1.min(start2));
-                    counts[3] = (getcounts.trans.end1_end2 as f32);//(end1.min(end2));
+                    counts[1] = getcounts.trans.start1_end2 as f32;//(start1.min(end2));
+                    counts[2] = getcounts.trans.end1_start2 as f32;//(end1.min(start2));
+                    counts[3] = getcounts.trans.end1_end2 as f32;//(end1.min(end2));
                     eprintln!("\torder and orientation counts {:?}", counts);
                 } else {
                     eprintln!("unrelated . . {} -- {} = {:?}, kmer coverage {}, p-value {}", assembly.contig_names[*contig1 as usize], 

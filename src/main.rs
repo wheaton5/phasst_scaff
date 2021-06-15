@@ -261,11 +261,14 @@ fn phasing_consistency(
         if *number_seen == 1 {
             let contig_size = assembly.contig_sizes.get(contig_id).unwrap();
             if *position < 100000 {
+               
                 let count = num_assembly_kmers_start_end.entry((*contig_id, true)).or_insert(0.0);
                 *count += 1.0;
+                 eprintln!("adding count {}",count);
             } else if contig_size - position < 100000 {
                 let count = num_assembly_kmers_start_end.entry((*contig_id, false)).or_insert(0.0);
                 *count += 1.0;
+                 eprintln!("adding count {}",count);
             }
         }
     }

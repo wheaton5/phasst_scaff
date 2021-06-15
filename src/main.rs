@@ -38,7 +38,7 @@ fn main() {
     eprintln!("loading hic kmers");
     let hic_mols = load_hic(Some(&params.hic_mols), &kmers, false);
     eprintln!("building phasing consistency counts");
-    let (phasing_consistency_counts, scaffolds) = phasing_consistency(&hic_mols, &phasing, &kmer_contigs, &assembly);
+    let (phasing_consistency_counts, scaffolds) = phasing_consistency(&hic_mols, &phasing, &kmer_contigs, &assembly, &kmers);
     let biggest_to_smallest_scaffolds = output_modified_fasta(&scaffolds,  &params, &assembly);
     //let ordered_scaffolds = order_and_orient(biggest_to_smallest_scaffolds, order_and_orientation_counts, &hic_mols, &assembly);
 }
@@ -249,7 +249,7 @@ impl OrderOrientPhase {
 fn phasing_consistency(
     hic_mols: &HicMols,
     phasing: &Phasing,
-    kmer_contigs: &KmerContigs, assembly: &Assembly,
+    kmer_contigs: &KmerContigs, assembly: &Assembly, kmers: &Kmers
 ) -> (PhasingConsistencyCounts,  Scaffold) {
     let mut phasing_consistency_counts = PhasingConsistencyCounts::new();
     let mut components: DisjointSet<i32> = DisjointSet::new();
@@ -283,6 +283,9 @@ fn phasing_consistency(
                 let mut phase1 = phase1;
                 if let Some(contigid1) = kmer_contigs.get_contig(&var1.abs()) {
                     //let (_contig_id, _number_seen, _order, position1) = assembly.variants.get(&var1.abs()).unwrap();
+                    if kmer_contig_position(var1.abs(), assembly) == None {
+                        eprintln!("{}", kmers.kmers.get(&var1.abs()).expect("didnt work"));
+                    }
                     let (_contig_id, position1) = kmer_contig_position(var1.abs(), assembly).expect("why");
                     let contig1_size = assembly.contig_sizes.get(contigid1).unwrap();
                     let mut contig1_start_or_end = None;

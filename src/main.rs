@@ -176,13 +176,13 @@ fn get_empirical_hic_distribution(hic_mols: &HicMols, assembly: &Assembly) -> Le
 
 fn kmer_contig_position(kmer: i32, assembly: &Assembly) -> Option<(i32, usize)> {
     if let Some((contig_id, number_seen, _order, position)) = assembly.variants.get(&kmer.abs()) {
-        if *number_seen == 1 {
+        //if *number_seen == 1 {
             return Some((*contig_id, *position));
-        }
+        //}
     } else if let Some((contig_id, number_seen, _order, position)) = assembly.variants.get(&Kmers::pair(kmer.abs())) {
-        if *number_seen == 1 {
+        //if *number_seen == 1 {
             return Some((*contig_id, *position));
-        }
+        //}
     }
     None
 }
@@ -264,11 +264,9 @@ fn phasing_consistency(
                
                 let count = num_assembly_kmers_start_end.entry((*contig_id, true)).or_insert(0.0);
                 *count += 1.0;
-                 eprintln!("adding count {}",count);
             } else if contig_size - position < 100000 {
                 let count = num_assembly_kmers_start_end.entry((*contig_id, false)).or_insert(0.0);
                 *count += 1.0;
-                 eprintln!("adding count {}",count);
             }
         }
     }

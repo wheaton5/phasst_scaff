@@ -531,7 +531,9 @@ fn load_phased_vcf(vcf: &String, kmers: &Kmers, assembly: &Assembly) -> (Phasing
         let format = toks[9].to_string();
         let gt = format.split(":").collect::<Vec<&str>>()[0].to_string();
         let phasing = gt.split("|").collect::<Vec<&str>>();
-
+        if phasing.len() == 1 {
+            continue;
+        }
         let hap1 = phasing[0].to_string();
         let hap2 = phasing[1].to_string();
         let kmer_id1 = kmers.kmer_ids.get(&reference).unwrap();
